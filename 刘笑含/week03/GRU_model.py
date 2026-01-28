@@ -44,17 +44,17 @@ class ModelDataset(Dataset):
 
 
 
-
-class RNNClassifier(nn.Module):
+class GRUClassifier(nn.Module):
   def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim):
-    super(RNNClassifier, self).__init__()
+    super(GRUClassifier, self).__init__()
     self.embedding = nn.Embedding(vocab_size, embedding_dim)
-    self.rnn = nn.RNN(embedding_dim, hidden_dim, batch_first = True)
+    self.gru = nn.GRU(embedding_dim, hidden_dim, batch_first = True)
     self.fc = nn.Linear(hidden_dim, output_dim)
+
 
   def forward(self, x):
     embedded = self.embedding(x)
-    rnn_out, hidden_state = self.rnn(embedded)
+    gru_out, hidden_state = self.gru(embedded)
     out = self.fc(hidden_state.squeeze(0))
     return out
 
@@ -70,39 +70,37 @@ embedding_dim = 64
 hidden_dim = 128
 output_dim = len(label_to_index)
 
-rnn_model = RNNClassifier(vocab_size, embedding_dim, hidden_dim, output_dim)
+gru_model = GRUClassifier(vocab_size, embedding_dim, hidden_dim, output_dim)
 criterion = nn.CrossEntropyLoss()
-optimizer_rnn = optim.Adam(rnn_model.parameters(), lr = 0.001)
+optimizer_gru = optim.Adam(gru_model.parameters(), lr = 0.001)
 
-
-num_epochs = 12
+num_epochs = 4
 loss_history = []
 
 for epoch in range(num_epochs):
-  rnn_model.train()
-  running_loss_rnn = 0.0
+  gru_model.train()
+  running_loss_gru = 0.0
   for index, (input, labels) in enumerate(dataloader):
-    optimizer_rnn.zero_grad()
-    rnn_outputs = rnn_model(input)
-    loss_rnn = criterion(rnn_outputs, labels)
-    loss_rnn.backward()
-    torch.nn.utils.clip_grad_norm_(rnn_model.parameters(), max_norm=1.0)
-    optimizer_rnn.step()
-    running_loss_rnn += loss_rnn.item()
+    optimizer_gru.zero_grad()
+    gru_outputs = gru_model(input)
+    loss_gru = criterion(gru_outputs, labels)
+    loss_gru.backward()
+    optimizer_gru.step()
+    running_loss_gru += loss_gru.item()
     if index % 50 == 0:
-      print(f"Batch 个数 {index}, 当前Batch Loss_rnn: {loss_rnn.item():.4f}")
-  epoch_loss = running_loss_rnn / len(dataloader)
+      print(f"Batch 个数 {index}, 当前Batch Loss_gru: {loss_gru.item():.4f}")
+  epoch_loss = running_loss_gru / len(dataloader)
   loss_history.append(epoch_loss)
-  print(f"Epoch [{epoch + 1}/{num_epochs}], Loss_rnn: {epoch_loss:.4f}")
+  print(f"Epoch [{epoch + 1}/{num_epochs}], Loss_gru: {epoch_loss:.4f}")
 
 plt.figure(figsize=(6, 4))
-plt.plot(range(1, num_epochs + 1), loss_history, "o-", color="coral")
+plt.plot(range(1, num_epochs + 1), loss_history, "o-", color="steelblue")
 plt.xlabel("Epoch")
 plt.ylabel("Loss")
-plt.title("RNN Loss Curve")
+plt.title("GRU Loss Curve")
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
-plt.savefig("rnn_loss.png", dpi=120)
+plt.savefig("gru_loss.png", dpi=120)
 plt.show()
 
 
@@ -124,11 +122,12 @@ def classify_text(text, model, char_to_index, max_len, index_to_label):
 
 
 new_text = "帮我导航到北京"
-predicted_class_rnn = classify_text(new_text, rnn_model, char_to_index, max_len, index_to_label)
-print(f"输入 '{new_text}' 预测为: '{predicted_class_rnn}'")
+predicted_class = classify_text(new_text, gru_model, char_to_index, max_len, index_to_label)
+print(f"输入 '{new_text}' 预测为: '{predicted_class}'")
 
 new_text_2 = "查询明天北京的天气"
-predicted_class_rnn_2 = classify_text(new_text_2, rnn_model, char_to_index, max_len, index_to_label)
-print(f"输入 '{new_text_2}' 预测为: '{predicted_class_rnn_2}'")
+predicted_class_2 = classify_text(new_text_2, gru_model, char_to_index, max_len, index_to_label)
+print(f"输入 '{new_text_2}' 预测为: '{predicted_class_2}'")
+
 
 
